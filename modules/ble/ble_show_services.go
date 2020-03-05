@@ -4,6 +4,7 @@ package ble
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"strconv"
@@ -206,15 +207,29 @@ func parseProperties(ch *gatt.Characteristic) (props []string, isReadable bool, 
 }
 
 func parseRawData(raw []byte) string {
-	s := ""
+	// zero bytes should not appear with empty parens
+	if len(raw) == 0 {
+		return ""
+	}
+
+	// Raw data should be annotated as raw data and displayed without flair
+	var builder strings.Builder
+	enc := hex.NewEncoder(&builder)
+
+	// Display the raw data
+	enc.Write(raw)
+
+	// Display a string encoding in parens afterwards
+	fmt.Fprint(&builder, " (")
 	for _, b := range raw {
 		if strconv.IsPrint(rune(b)) {
-			s += tui.Yellow(string(b))
+			fmt.Fprintf(&builder, "%s%s%s", tui.YELLOW, string(b), tui.RESET)
 		} else {
-			s += tui.Dim(fmt.Sprintf("%02x", b))
+			fmt.Fprintf(&builder, "%02x", b)
 		}
 	}
-	return s
+	fmt.Fprint(&builder, ")")
+	return builder.String()
 }
 
 // org.bluetooth.characteristic.gap.appearance
